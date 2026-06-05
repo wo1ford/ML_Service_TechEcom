@@ -1,6 +1,6 @@
 # ML Prediction Service
 
-Сервис прогнозирования дефицита курьеров на FastAPI. Взял и сделал простую модельку взяв идею с сореванования Kaggle [Courier Deficit Regression Challenge](https://www.kaggle.com/competitions/intern-regression-courier-deficit-challenge/).
+Сервис прогнозирования дефицита курьеров на FastAPI. Сделал простую модельку, взяв идею с сореванования Kaggle [Courier Deficit Regression Challenge](https://www.kaggle.com/competitions/intern-regression-courier-deficit-challenge/).
 
 ## Запуск
 
