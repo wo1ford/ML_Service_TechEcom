@@ -1,0 +1,11 @@
+services:
+  ml-api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./model:/app/model
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Service</title>
+    <style>
+        :root{--bg:#fafaf9;--surface:#fff;--border:#e4e4e4;--text:#2d2d2d;--muted:#8c8c8c;--primary:#4a4a4a;--radius:6px}
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+        .container{max-width:640px;margin:60px auto;padding:0 20px}
+        h1{font-size:20px;font-weight:500;margin-bottom:4px}
+        .subtitle{font-size:13px;color:var(--muted);margin-bottom:28px}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px}
+        .card-title{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:16px}
+        .form-row{display:flex;gap:12px;align-items:end}
+        .form-group{flex:1}
+        label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+        input[type=number]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:14px;outline:none}
+        input[type=number]:focus{border-color:#888}
+        button{padding:8px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius);font-size:13px;cursor:pointer;white-space:nowrap}
+        button:hover{background:#333}
+        .result{margin-top:16px;padding:12px;background:#f5f5f5;border-radius:var(--radius);font-size:13px;display:none}
+        .result.visible{display:block}
+        .result-value{font-size:24px;font-weight:500}
+        .dropzone{border:1px dashed var(--border);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;font-size:13px;color:var(--muted);transition:background .2s}
+        .dropzone:hover{background:#f5f5f5}
+        .dropzone.active{background:#eee;border-color:#888}
+        input[type=file]{display:none}
+        .file-name{font-size:12px;color:var(--muted);margin-top:8px}
+        .status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:24px}
+        .status-dot{width:6px;height:6px;border-radius:50%;background:#4caf50}
+        .status-dot.off{background:#ccc}
+        .json-area{width:100%;min-height:80px;padding:10px;border:1px solid var(--border);border-radius:var(--radius);font-family:monospace;font-size:13px;resize:vertical;outline:none;margin-bottom:12px}
+        .json-area:focus{border-color:#888}
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>ML Prediction Service</h1>
+    <p class="subtitle">Прогнозирование дефицита курьеров</p>
+    <div class="status"><span class="status-dot" id="sd"></span><span id="st">Проверка...</span></div>
+    <div class="card">
+        <div class="card-title">Один запрос</div>
+        <div class="form-row">
+            <div class="form-group"><label>Заказы</label><input type="number" id="orders" value="250" min="0"></div>
+            <div class="form-group"><label>Курьеры</label><input type="number" id="couriers" value="2" min="0"></div>
+            <button onclick="single()">Predict</button>
+        </div>
+        <div class="result" id="sr">Дефицит: <span class="result-value" id="sv">—</span></div>
+    </div>
+    <div class="card">
+        <div class="card-title">Пакетный запрос</div>
+        <textarea class="json-area" id="bi">[{"orders":100,"couriers":1},{"orders":300,"couriers":2},{"orders":50,"couriers":5}]</textarea>
+        <button onclick="batch()">Predict Batch</button>
+        <div class="result" id="br"></div>
+    </div>
+    <div class="card">
+        <div class="card-title">CSV файл</div>
+        <div class="dropzone" id="dz">Перетащите CSV или кликните</div>
+        <input type="file" id="fi" accept=".csv">
+        <div class="file-name" id="fn"></div>
+        <button onclick="csv()" id="cb" style="margin-top:12px;display:none">Predict CSV</button>
+    </div>
+</div>
+<script>
+    const A='/api/v1';
+    async function health(){try{const r=await fetch(A+'/health');const d=await r.json();document.getElementById('st').textContent=`Статус: ${d.status} | Модель: ${d.model_loaded?'загружена':'fallback'} | Аптайм: ${d.uptime_seconds?.toFixed(0)}с`;document.getElementById('sd').className='status-dot'+(d.status==='healthy'?'':' off')}catch{}}health();
+    async function single(){const o=+document.getElementById('orders').value,c=+document.getElementById('couriers').value;const r=await fetch(A+'/predict/single',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orders:o,couriers:c})});const d=await r.json();document.getElementById('sr').classList.add('visible');document.getElementById('sv').textContent=d.deficit}
+    async function batch(){let i;try{i=JSON.parse(document.getElementById('bi').value)}catch{return alert('JSON error')}const r=await fetch(A+'/predict/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:i})});const d=await r.json();document.getElementById('br').classList.add('visible');document.getElementById('br').innerHTML=d.results.map((x,i)=>`<div>${i+1}. Дефицит: <b>${x.deficit}</b></div>`).join('')+`<div style="margin-top:8px;color:#8c8c8c;font-size:11px">Всего: ${d.total} | ${d.elapsed_ms?.toFixed(0)}ms</div>`}
+    let cf=null;document.getElementById('dz').addEventListener('click',()=>document.getElementById('fi').click());document.getElementById('dz').addEventListener('dragover',e=>{e.preventDefault();e.target.classList.add('active')});document.getElementById('dz').addEventListener('dragleave',e=>e.target.classList.remove('active'));document.getElementById('dz').addEventListener('drop',e=>{e.preventDefault();e.target.classList.remove('active');if(e.dataTransfer.files.length){cf=e.dataTransfer.files[0];document.getElementById('fn').textContent=cf.name;document.getElementById('cb').style.display='block'}});document.getElementById('fi').addEventListener('change',e=>{if(e.target.files.length){cf=e.target.files[0];document.getElementById('fn').textContent=cf.name;document.getElementById('cb').style.display='block'}});
+    async function csv(){if(!cf)return;const fd=new FormData();fd.append('file',cf);const r=await fetch(A+'/predict/csv',{method:'POST',body:fd});if(!r.ok){const e=await r.json();return alert(e.detail)}const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='result_'+cf.name;a.click()}
+</script>
+</body>
+</html>

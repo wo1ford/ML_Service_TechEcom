@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+*.pkl
+!model/.gitkeep
+uploads/*.csv
+logs/*.log
+.env
+.pytest_cache/
+htmlcov/
+.coverage
